@@ -1,5 +1,9 @@
 # go-setup
 
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Shell](https://img.shields.io/badge/shell-bash-4EAA25.svg)](setup-go.sh)
+[![tests](https://github.com/8b-is/go-setup/actions/workflows/ci.yml/badge.svg)](https://github.com/8b-is/go-setup/actions)
+
 One-shot, idempotent **Go toolchain setup** for the 8b-is constellation,
 targeted at Apple Silicon Macs (M1 / M1 64GB).
 
