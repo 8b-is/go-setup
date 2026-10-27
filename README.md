@@ -37,6 +37,17 @@ brew install --HEAD b8-go    # also installs the 1b-go alias
 
 The formula lives in [`Formula/b8-go.rb`](Formula/b8-go.rb).
 
+## Languages (Zig · Idris · Perl)
+
+Companion script for the other sovereign languages — idempotent, cross-platform
+(macOS via Homebrew, Linux via apt):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/8b-is/go-setup/main/setup-langs.sh | bash
+```
+
+Installs and verifies `zig`, `idris2`, and `perl`.
+
 ## License
 
 MIT — from love, from within.
