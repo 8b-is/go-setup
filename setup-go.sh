@@ -6,7 +6,8 @@
 #
 # Installs (if missing), configures, and verifies a complete Go toolchain for
 # the 8b-is constellation: Go itself, the standard GOPATH/GOPROXY/GOBIN layout,
-# and the linters/build tools the repos expect. Safe to re-run.
+# Apple Silicon unified-memory defaults (tuned per node), and the linters/build
+# tools the repos expect. Safe to re-run.
 
 set -euo pipefail
 
@@ -50,11 +51,28 @@ export GOPATH="${GOPATH:-$GOPATH_DEFAULT}"
 export GOBIN="${GOBIN:-$GOBIN_DEFAULT}"
 # Default module proxy; swap to a regional mirror if preferred.
 export GOPROXY="${GOPROXY:-https://proxy.golang.org,direct}"
+
+# Apple Silicon unified-memory defaults, tuned per node.
+readonly MEM_BYTES="$(sysctl -n hw.memsize 2>/dev/null || echo 0)"
+export GOARCH=arm64
+export CGO_ENABLED=1
+export GOGC=100
+if (( MEM_BYTES >= 60000000000 )); then
+    export GOMEMLIMIT=53687091200   # 50 GiB — 8b M1 64GB node
+    log "Unified memory: 64GB node — GOMEMLIMIT=50GiB"
+elif (( MEM_BYTES >= 30000000000 )); then
+    export GOMEMLIMIT=21474836480   # 20 GiB — 32GB M1
+    log "Unified memory: 32GB node — GOMEMLIMIT=20GiB"
+else
+    export GOMEMLIMIT=10737418240   # 10 GiB — 16GB M1
+    log "Unified memory: 16GB node — GOMEMLIMIT=10GiB"
+fi
+
 mkdir -p "$GOPATH" "$GOBIN"
 
 # Persist into the shell profile when not already present, so a fresh login
 # picks up the layout without manual export.
-for VAR in GOPATH GOBIN GOPROXY; do
+for VAR in GOPATH GOBIN GOPROXY GOARCH CGO_ENABLED GOGC GOMEMLIMIT; do
     if ! grep -q "export $VAR=" "$HOME/.zprofile" 2>/dev/null; then
         {
             echo ""
@@ -81,12 +99,23 @@ install_tool staticcheck   honnef.co/go/tools/cmd/staticcheck
 install_tool gofumpt       mvdan.cc/gofumpt
 install_tool air           github.com/air-verse/air
 
-# --- 5. Verify ---------------------------------------------------------------
+# --- 5. 1b alias (1-bit / balanced ternary primitive) -----------------------
+if command -v b8-go >/dev/null 2>&1; then
+    ln -sf "$(command -v b8-go)" "$GOBIN/1b-go"
+    ok "symlinked 1b-go -> b8-go in $GOBIN"
+elif [[ -f "$0" ]]; then
+    ln -sf "$0" "$GOBIN/1b-go"
+    ok "symlinked 1b-go -> setup-go.sh in $GOBIN"
+fi
+
+# --- 6. Verify ---------------------------------------------------------------
 log "Verifying…"
 go version
 log "GOPATH  = $(go env GOPATH)"
 log "GOBIN   = $(go env GOBIN)"
 log "GOPROXY = $(go env GOPROXY)"
+log "GOARCH  = $(go env GOARCH) · CGO_ENABLED=$(go env CGO_ENABLED) · GOGC=$GOGC"
+log "GOMEMLIMIT = $GOMEMLIMIT bytes"
 
 if [[ "${1:-}" == "--check" ]]; then
     ok "Check complete"

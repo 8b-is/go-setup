@@ -8,9 +8,12 @@ class B8Go < Formula
 
   def install
     bin.install "setup-go.sh" => "b8-go"
+    # 1b-go: the 1-bit / balanced ternary (BitNet b1.58) alias of b8-go.
+    bin.install_symlink "b8-go" => "1b-go"
   end
 
   test do
     assert_match "8b-is Go toolchain", shell_output("#{bin}/b8-go --check")
+    assert_predicate bin/"1b-go", :exist?
   end
 end
