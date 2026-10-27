@@ -14,6 +14,7 @@ set -euo pipefail
 readonly GO_MIN="1.22"
 readonly BREW_ARM="/opt/homebrew/bin/brew"
 readonly BREW_X86="/usr/local/bin/brew"
+readonly CHECK_ONLY="$([[ "${1:-}" == "--check" ]] && echo 1 || echo 0)"
 
 log()  { printf '\033[1;36m[8b-go]\033[0m %s\n' "$*"; }
 ok()   { printf '\033[1;32m[ok]\033[0m %s\n' "$*"; }
@@ -70,46 +71,49 @@ fi
 
 mkdir -p "$GOPATH" "$GOBIN"
 
-# Persist into the shell profile when not already present, so a fresh login
-# picks up the layout without manual export.
-for VAR in GOPATH GOBIN GOPROXY GOARCH CGO_ENABLED GOGC GOMEMLIMIT; do
-    if ! grep -q "export $VAR=" "$HOME/.zprofile" 2>/dev/null; then
-        {
-            echo ""
-            echo "# 8b-is Go setup ($(date +%Y-%m-%d))"
-            echo "export $VAR=${!VAR}"
-        } >> "$HOME/.zprofile"
-        warn "Appended $VAR to ~/.zprofile"
-    fi
-done
+if [[ "$CHECK_ONLY" -eq 0 ]]; then
+    # Persist into the shell profile when not already present, so a fresh login
+    # picks up the layout without manual export.
+    for VAR in GOPATH GOBIN GOPROXY GOARCH CGO_ENABLED GOGC GOMEMLIMIT; do
+        if ! grep -q "export $VAR=" "$HOME/.zprofile" 2>/dev/null; then
+            {
+                echo ""
+                echo "# 8b-is Go setup ($(date +%Y-%m-%d))"
+                echo "export $VAR=${!VAR}"
+            } >> "$HOME/.zprofile"
+            warn "Appended $VAR to ~/.zprofile"
+        fi
+    done
 
-# --- 4. Tooling --------------------------------------------------------------
-install_tool() {
-    local name="$1" pkg="$2"
-    if command -v "$name" >/dev/null 2>&1; then
-        ok "$name already present"
-    else
-        log "Installing $name…"
-        go install "$pkg@latest"
-    fi
-}
+    # --- 4. Tooling --------------------------------------------------------------
+    install_tool() {
+        local name="$1" pkg="$2"
+        if command -v "$name" >/dev/null 2>&1; then
+            ok "${name} already present"
+        else
+            log "Installing ${name}..."
+            go install "${pkg}@latest"
+        fi
+    }
 
-install_tool golangci-lint github.com/golangci/golangci-lint/cmd/golangci-lint
-install_tool staticcheck   honnef.co/go/tools/cmd/staticcheck
-install_tool gofumpt       mvdan.cc/gofumpt
-install_tool air           github.com/air-verse/air
+    install_tool golangci-lint github.com/golangci/golangci-lint/cmd/golangci-lint
+    install_tool staticcheck   honnef.co/go/tools/cmd/staticcheck
+    install_tool gofumpt       mvdan.cc/gofumpt
+    install_tool air           github.com/air-verse/air
+fi
 
 # --- 5. 1b alias (1-bit / balanced ternary primitive) -----------------------
 if command -v b8-go >/dev/null 2>&1; then
     ln -sf "$(command -v b8-go)" "$GOBIN/1b-go"
     ok "symlinked 1b-go -> b8-go in $GOBIN"
 elif [[ -f "$0" ]]; then
-    ln -sf "$0" "$GOBIN/1b-go"
-    ok "symlinked 1b-go -> setup-go.sh in $GOBIN"
+    install -m 0755 "$0" "$GOBIN/b8-go"
+    ln -sf "$GOBIN/b8-go" "$GOBIN/1b-go"
+    ok "installed b8-go and symlinked 1b-go -> b8-go in $GOBIN"
 fi
 
 # --- 6. Verify ---------------------------------------------------------------
-log "Verifying…"
+log "Verifying..."
 go version
 log "GOPATH  = $(go env GOPATH)"
 log "GOBIN   = $(go env GOBIN)"
@@ -117,8 +121,8 @@ log "GOPROXY = $(go env GOPROXY)"
 log "GOARCH  = $(go env GOARCH) · CGO_ENABLED=$(go env CGO_ENABLED) · GOGC=$GOGC"
 log "GOMEMLIMIT = $GOMEMLIMIT bytes"
 
-if [[ "${1:-}" == "--check" ]]; then
-    ok "Check complete"
+if [[ "$CHECK_ONLY" -eq 1 ]]; then
+    ok "8b-is Go toolchain check complete"
     exit 0
 fi
 
