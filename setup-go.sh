@@ -53,21 +53,15 @@ export GOBIN="${GOBIN:-$GOBIN_DEFAULT}"
 # Default module proxy; swap to a regional mirror if preferred.
 export GOPROXY="${GOPROXY:-https://proxy.golang.org,direct}"
 
-# Apple Silicon unified-memory defaults, tuned per node.
+# Apple Silicon unified-memory defaults: GOMEMLIMIT = 85% of unified memory,
+# leaving headroom for MLX-QUANT + macOS. Pure-bash, adapts to any node
+# (16GB / 32GB / 64GB / larger) — no hardcoded tiers, no external interpreter.
 readonly MEM_BYTES="$(sysctl -n hw.memsize 2>/dev/null || echo 0)"
 export GOARCH=arm64
 export CGO_ENABLED=1
 export GOGC=100
-if (( MEM_BYTES >= 60000000000 )); then
-    export GOMEMLIMIT=53687091200   # 50 GiB — 8b M1 64GB node
-    log "Unified memory: 64GB node — GOMEMLIMIT=50GiB"
-elif (( MEM_BYTES >= 30000000000 )); then
-    export GOMEMLIMIT=21474836480   # 20 GiB — 32GB M1
-    log "Unified memory: 32GB node — GOMEMLIMIT=20GiB"
-else
-    export GOMEMLIMIT=10737418240   # 10 GiB — 16GB M1
-    log "Unified memory: 16GB node — GOMEMLIMIT=10GiB"
-fi
+export GOMEMLIMIT=$(( MEM_BYTES * 85 / 100 ))
+log "Unified memory: $(( MEM_BYTES / 1073741824 )) GiB — GOMEMLIMIT=$(( GOMEMLIMIT / 1073741824 )) GiB"
 
 mkdir -p "$GOPATH" "$GOBIN"
 
