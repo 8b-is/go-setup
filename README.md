@@ -13,6 +13,12 @@ targeted at Apple Silicon Macs (M1 / M1 64GB).
 curl -fsSL https://raw.githubusercontent.com/8b-is/go-setup/main/setup-go.sh | bash
 ```
 
+To inspect the detected Apple Silicon unified-memory profile (`GOMEMLIMIT`, `GOGC`, `GOARCH=arm64`, `CGO_ENABLED=1`) and `1b-go -> b8-go` alias without modifying dotfiles or installing packages:
+
+```bash
+./setup-go.sh --check
+```
+
 ## What it does
 
 1. Installs **Homebrew** (if missing) and wires `/opt/homebrew` into `PATH`.
